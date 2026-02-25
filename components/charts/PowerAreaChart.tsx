@@ -11,16 +11,55 @@ import {
   Line,
 } from 'recharts';
 
-interface PowerAreaChartProps {
-  data: Array<{
-    hour: number;
-    generationKwh: number;
-    importKwh: number;
-    consumptionKwh: number;
-  }>;
+interface HourlyData {
+  hour: number;
+  generationKwh: number;
+  importKwh: number;
+  consumptionKwh: number;
 }
 
-export default function PowerAreaChart({ data }: PowerAreaChartProps) {
+interface DailyData {
+  date: string;
+  generationKwh: number;
+  importKwh: number;
+  consumptionKwh: number;
+}
+
+interface PowerAreaChartProps {
+  data: HourlyData[] | DailyData[];
+  period?: 'day' | 'week' | 'month' | 'year';
+}
+
+export default function PowerAreaChart({ data, period = 'day' }: PowerAreaChartProps) {
+  const isHourlyData = (item: HourlyData | DailyData): item is HourlyData => {
+    return 'hour' in item;
+  };
+
+  const dataKey = data.length > 0 && isHourlyData(data[0]) ? 'hour' : 'date';
+
+  const formatXAxis = (value: string | number) => {
+    if (typeof value === 'number') {
+      return `${value}h`;
+    }
+    // For dates, show short format
+    const date = new Date(value);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const formatTooltipLabel = (value: string | number) => {
+    if (typeof value === 'number') {
+      return `Hour: ${value}`;
+    }
+    // For dates, show full format
+    const date = new Date(value);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   return (
     <ResponsiveContainer width="100%" height={250}>
       <AreaChart
@@ -39,9 +78,9 @@ export default function PowerAreaChart({ data }: PowerAreaChartProps) {
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
         <XAxis
-          dataKey="hour"
+          dataKey={dataKey}
           tick={{ fill: '#94A3B8', fontSize: 12 }}
-          tickFormatter={(hour) => `${hour}h`}
+          tickFormatter={formatXAxis}
         />
         <YAxis
           tick={{ fill: '#94A3B8', fontSize: 12 }}
@@ -54,7 +93,7 @@ export default function PowerAreaChart({ data }: PowerAreaChartProps) {
             borderRadius: '0.5rem',
             color: '#F1F5F9',
           }}
-          labelFormatter={(hour) => `Hour: ${hour}`}
+          labelFormatter={formatTooltipLabel}
           formatter={(value: number, name: string) => {
             const labels: Record<string, string> = {
               generationKwh: 'Generation',

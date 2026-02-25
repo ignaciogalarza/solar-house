@@ -1,3 +1,3 @@
 export { PeriodSelector } from './PeriodSelector';
-export { PowerAreaChart } from './PowerAreaChart';
-export { EnergyBarChart } from './EnergyBarChart';
+export { default as PowerAreaChart } from './PowerAreaChart';
+export { default as EnergyBarChart } from './EnergyBarChart';
