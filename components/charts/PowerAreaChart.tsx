@@ -79,8 +79,9 @@ export default function PowerAreaChart({ data, period = 'day' }: PowerAreaChartP
         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
         <XAxis
           dataKey={dataKey}
-          tick={{ fill: '#94A3B8', fontSize: 12 }}
+          tick={{ fill: '#94A3B8', fontSize: 10 }}
           tickFormatter={formatXAxis}
+          interval={period === 'year' ? 30 : period === 'month' ? 4 : 'preserveStartEnd'}
         />
         <YAxis
           tick={{ fill: '#94A3B8', fontSize: 12 }}
