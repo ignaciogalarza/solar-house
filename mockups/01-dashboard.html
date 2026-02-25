@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Solar House</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            solar: '#F59E0B',
+            'grid-import': '#EF4444',
+            'grid-export': '#10B981',
+            consumption: '#3B82F6',
+            background: '#0F172A',
+            surface: '#1E293B',
+            'text-primary': '#F8FAFC',
+            'text-secondary': '#94A3B8',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0F172A;
+      color: #F8FAFC;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* Power Gauge SVG Animation */
+    .gauge-needle {
+      transform-origin: center bottom;
+      transition: transform 0.5s ease-out;
+    }
+
+    /* Energy Flow Animation */
+    @keyframes flow {
+      0% { stroke-dashoffset: 20; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .energy-flow-line {
+      stroke-dasharray: 8 4;
+      animation: flow 1s linear infinite;
+    }
+    .energy-flow-line.reverse {
+      animation-direction: reverse;
+    }
+
+    /* Pulse animation for active indicators */
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .pulse-active {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-surface/95 backdrop-blur border-b border-slate-700 px-4 py-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg class="w-8 h-8 text-solar" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <h1 class="text-lg font-semibold">Solar House</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="flex items-center gap-1 text-xs text-text-secondary">
+          <span class="w-2 h-2 rounded-full bg-grid-export pulse-active"></span>
+          Live
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 space-y-4 max-w-lg mx-auto">
+
+    <!-- Power Gauge Card -->
+    <div class="bg-surface rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-medium text-text-secondary">Current Power</h2>
+        <span class="text-xs text-text-secondary">Updated 2s ago</span>
+      </div>
+
+      <!-- SVG Power Gauge -->
+      <div class="relative flex justify-center py-4">
+        <svg viewBox="0 0 200 120" class="w-full max-w-[280px]">
+          <!-- Background arc -->
+          <path
+            d="M 20 100 A 80 80 0 0 1 180 100"
+            fill="none"
+            stroke="#334155"
+            stroke-width="12"
+            stroke-linecap="round"
+          />
+          <!-- Import zone (red) -->
+          <path
+            d="M 20 100 A 80 80 0 0 1 60 35"
+            fill="none"
+            stroke="#EF4444"
+            stroke-width="12"
+            stroke-linecap="round"
+            opacity="0.3"
+          />
+          <!-- Export zone (green) -->
+          <path
+            d="M 140 35 A 80 80 0 0 1 180 100"
+            fill="none"
+            stroke="#10B981"
+            stroke-width="12"
+            stroke-linecap="round"
+            opacity="0.3"
+          />
+
+          <!-- Active arc (showing export) -->
+          <path
+            d="M 100 20 A 80 80 0 0 1 165 75"
+            fill="none"
+            stroke="#10B981"
+            stroke-width="12"
+            stroke-linecap="round"
+          />
+
+          <!-- Center text -->
+          <text x="100" y="85" text-anchor="middle" class="text-2xl font-bold" fill="#F8FAFC">
+            2.4 kW
+          </text>
+          <text x="100" y="100" text-anchor="middle" class="text-xs" fill="#10B981">
+            ▲ Exporting
+          </text>
+
+          <!-- Scale labels -->
+          <text x="25" y="115" text-anchor="middle" class="text-xs" fill="#94A3B8">-5kW</text>
+          <text x="100" y="15" text-anchor="middle" class="text-xs" fill="#94A3B8">0</text>
+          <text x="175" y="115" text-anchor="middle" class="text-xs" fill="#94A3B8">+5kW</text>
+        </svg>
+      </div>
+
+      <!-- Power summary row -->
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        <div class="text-center p-2 bg-background rounded-lg">
+          <div class="text-solar text-lg font-semibold">4.2 kW</div>
+          <div class="text-xs text-text-secondary">Solar</div>
+        </div>
+        <div class="text-center p-2 bg-background rounded-lg">
+          <div class="text-consumption text-lg font-semibold">1.8 kW</div>
+          <div class="text-xs text-text-secondary">Using</div>
+        </div>
+        <div class="text-center p-2 bg-background rounded-lg">
+          <div class="text-grid-export text-lg font-semibold">2.4 kW</div>
+          <div class="text-xs text-text-secondary">Export</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Energy Flow Diagram -->
+    <div class="bg-surface rounded-2xl p-4">
+      <h2 class="text-sm font-medium text-text-secondary mb-4">Energy Flow</h2>
+
+      <svg viewBox="0 0 320 180" class="w-full">
+        <!-- Solar Panel (top center) -->
+        <g transform="translate(140, 10)">
+          <rect x="0" y="0" width="40" height="30" rx="4" fill="#F59E0B" opacity="0.2" stroke="#F59E0B" stroke-width="2"/>
+          <text x="20" y="50" text-anchor="middle" fill="#F59E0B" class="text-xs font-medium">Solar</text>
+          <text x="20" y="65" text-anchor="middle" fill="#F8FAFC" class="text-sm font-bold">4.2kW</text>
+        </g>
+
+        <!-- House (center) -->
+        <g transform="translate(130, 85)">
+          <rect x="0" y="10" width="60" height="40" rx="4" fill="#3B82F6" opacity="0.2" stroke="#3B82F6" stroke-width="2"/>
+          <polygon points="30,0 0,15 60,15" fill="#3B82F6" opacity="0.2" stroke="#3B82F6" stroke-width="2"/>
+          <text x="30" y="70" text-anchor="middle" fill="#3B82F6" class="text-xs font-medium">Home</text>
+          <text x="30" y="85" text-anchor="middle" fill="#F8FAFC" class="text-sm font-bold">1.8kW</text>
+        </g>
+
+        <!-- Grid (left) -->
+        <g transform="translate(20, 85)">
+          <rect x="0" y="10" width="40" height="40" rx="4" fill="#10B981" opacity="0.2" stroke="#10B981" stroke-width="2"/>
+          <text x="20" y="70" text-anchor="middle" fill="#10B981" class="text-xs font-medium">Grid</text>
+          <text x="20" y="85" text-anchor="middle" fill="#F8FAFC" class="text-sm font-bold">↑2.4kW</text>
+        </g>
+
+        <!-- EV Charger (right) -->
+        <g transform="translate(260, 85)">
+          <rect x="0" y="10" width="40" height="40" rx="4" fill="#8B5CF6" opacity="0.2" stroke="#8B5CF6" stroke-width="2"/>
+          <text x="20" y="70" text-anchor="middle" fill="#8B5CF6" class="text-xs font-medium">EV</text>
+          <text x="20" y="85" text-anchor="middle" fill="#94A3B8" class="text-sm">Idle</text>
+        </g>
+
+        <!-- Hot Water (bottom center) -->
+        <g transform="translate(140, 140)">
+          <rect x="0" y="0" width="40" height="30" rx="4" fill="#EC4899" opacity="0.2" stroke="#EC4899" stroke-width="2"/>
+          <text x="20" y="15" text-anchor="middle" fill="#F8FAFC" class="text-xs">52°C</text>
+        </g>
+
+        <!-- Flow Lines -->
+        <!-- Solar to House -->
+        <line x1="160" y1="70" x2="160" y2="95" stroke="#F59E0B" stroke-width="3" class="energy-flow-line"/>
+
+        <!-- House to Grid (export) -->
+        <line x1="130" y1="115" x2="65" y2="115" stroke="#10B981" stroke-width="3" class="energy-flow-line reverse"/>
+
+        <!-- House to Hot Water -->
+        <line x1="160" y1="135" x2="160" y2="145" stroke="#EC4899" stroke-width="2" class="energy-flow-line" opacity="0.3"/>
+
+      </svg>
+    </div>
+
+    <!-- Device Status Cards -->
+    <div class="space-y-3">
+      <h2 class="text-sm font-medium text-text-secondary">Devices</h2>
+
+      <!-- Zappi Card -->
+      <div class="bg-surface rounded-xl p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="font-medium">Zappi</div>
+            <div class="text-xs text-text-secondary">EV Charger</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium text-text-secondary">Eco+</div>
+          <div class="text-xs text-purple-400">No vehicle</div>
+        </div>
+      </div>
+
+      <!-- Eddi Card -->
+      <div class="bg-surface rounded-xl p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a10 10 0 0 1 0 20 10 10 0 0 1 0-20"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="font-medium">Eddi</div>
+            <div class="text-xs text-text-secondary">Hot Water</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium">52°C</div>
+          <div class="text-xs text-pink-400">Diverting 0.3kW</div>
+        </div>
+      </div>
+
+      <!-- Harvi Card -->
+      <div class="bg-surface rounded-xl p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M7 12h10"/>
+            </svg>
+          </div>
+          <div>
+            <div class="font-medium">Harvi</div>
+            <div class="text-xs text-text-secondary">CT Monitor</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium text-grid-export">Online</div>
+          <div class="text-xs text-text-secondary">3 CTs active</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Summary -->
+    <div class="bg-surface rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-text-secondary">Today</h2>
+        <span class="text-xs text-text-secondary">22 Feb 2026</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-background rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full bg-solar"></div>
+            <span class="text-xs text-text-secondary">Generated</span>
+          </div>
+          <div class="text-xl font-semibold">18.4 kWh</div>
+        </div>
+
+        <div class="bg-background rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full bg-consumption"></div>
+            <span class="text-xs text-text-secondary">Consumed</span>
+          </div>
+          <div class="text-xl font-semibold">12.1 kWh</div>
+        </div>
+
+        <div class="bg-background rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full bg-grid-export"></div>
+            <span class="text-xs text-text-secondary">Exported</span>
+          </div>
+          <div class="text-xl font-semibold">8.2 kWh</div>
+          <div class="text-xs text-grid-export">€0.82 earned</div>
+        </div>
+
+        <div class="bg-background rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-2 h-2 rounded-full bg-grid-import"></div>
+            <span class="text-xs text-text-secondary">Imported</span>
+          </div>
+          <div class="text-xl font-semibold">1.9 kWh</div>
+          <div class="text-xs text-grid-import">€0.57 cost</div>
+        </div>
+      </div>
+
+      <!-- Self metrics -->
+      <div class="mt-3 pt-3 border-t border-slate-700 grid grid-cols-2 gap-3">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-solar">66%</div>
+          <div class="text-xs text-text-secondary">Self-consumption</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-grid-export">84%</div>
+          <div class="text-xs text-text-secondary">Self-sufficiency</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 h-16 bg-surface border-t border-slate-700 flex items-center justify-around px-2 z-50">
+    <a href="01-dashboard.html" class="flex flex-col items-center gap-1 px-3 py-2 text-solar">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="9" rx="1"/>
+        <rect x="14" y="3" width="7" height="5" rx="1"/>
+        <rect x="14" y="12" width="7" height="9" rx="1"/>
+        <rect x="3" y="16" width="7" height="5" rx="1"/>
+      </svg>
+      <span class="text-xs font-medium">Dashboard</span>
+    </a>
+
+    <a href="02-charts.html" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 3v18h18"/>
+        <path d="M18 9l-5 5-4-4-3 3"/>
+      </svg>
+      <span class="text-xs">Charts</span>
+    </a>
+
+    <a href="03-tariffs.html" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M12 8v8M8 12h8"/>
+      </svg>
+      <span class="text-xs">Tariffs</span>
+    </a>
+
+    <a href="04-compare.html" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 3H5a2 2 0 0 0-2 2v4"/>
+        <path d="M15 3h4a2 2 0 0 1 2 2v4"/>
+        <path d="M9 21H5a2 2 0 0 1-2-2v-4"/>
+        <path d="M15 21h4a2 2 0 0 0 2-2v-4"/>
+        <path d="M12 7v10"/>
+      </svg>
+      <span class="text-xs">Compare</span>
+    </a>
+
+    <a href="#" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="1"/>
+        <circle cx="12" cy="5" r="1"/>
+        <circle cx="12" cy="19" r="1"/>
+      </svg>
+      <span class="text-xs">More</span>
+    </a>
+  </nav>
+
+</body>
+</html>

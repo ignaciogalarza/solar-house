@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tariffs - Solar House</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            solar: '#F59E0B',
+            'grid-import': '#EF4444',
+            'grid-export': '#10B981',
+            consumption: '#3B82F6',
+            background: '#0F172A',
+            surface: '#1E293B',
+            'text-primary': '#F8FAFC',
+            'text-secondary': '#94A3B8',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0F172A;
+      color: #F8FAFC;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    input, select {
+      background-color: #0F172A;
+      border: 1px solid #334155;
+      color: #F8FAFC;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #F59E0B;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    }
+
+    input::placeholder {
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-surface/95 backdrop-blur border-b border-slate-700 px-4 py-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <button class="p-1 text-text-secondary">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <h1 class="text-lg font-semibold">Electricity Tariff</h1>
+      </div>
+      <button class="text-solar text-sm font-medium">Save</button>
+    </div>
+  </header>
+
+  <main class="px-4 py-4 space-y-6 max-w-lg mx-auto">
+
+    <!-- Current Tariff Info -->
+    <div class="bg-surface rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-text-secondary">Current Tariff</span>
+        <span class="px-2 py-0.5 bg-grid-export/20 text-grid-export text-xs rounded-full">Active</span>
+      </div>
+      <div class="text-lg font-semibold">Electric Ireland - Home Electric+</div>
+      <div class="text-sm text-text-secondary">Day/Night tariff • Since 1 Jan 2025</div>
+    </div>
+
+    <!-- Provider & Tariff Name -->
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-text-secondary mb-2">Provider Name</label>
+        <input
+          type="text"
+          value="Electric Ireland"
+          class="w-full px-4 py-3 rounded-xl"
+          placeholder="e.g., Electric Ireland"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-text-secondary mb-2">Tariff Name</label>
+        <input
+          type="text"
+          value="Home Electric+"
+          class="w-full px-4 py-3 rounded-xl"
+          placeholder="e.g., Home Electric+"
+        />
+      </div>
+    </div>
+
+    <!-- Tariff Type -->
+    <div class="bg-surface rounded-2xl p-4">
+      <label class="block text-sm font-medium text-text-secondary mb-3">Tariff Type</label>
+
+      <div class="space-y-2">
+        <label class="flex items-center gap-3 p-3 bg-background rounded-xl cursor-pointer border border-transparent hover:border-slate-600">
+          <input type="radio" name="tariff_type" class="w-4 h-4 text-solar accent-solar"/>
+          <div>
+            <div class="font-medium">Single Rate</div>
+            <div class="text-xs text-text-secondary">Same rate 24/7</div>
+          </div>
+        </label>
+
+        <label class="flex items-center gap-3 p-3 bg-background rounded-xl cursor-pointer border-2 border-solar">
+          <input type="radio" name="tariff_type" class="w-4 h-4 text-solar accent-solar" checked/>
+          <div>
+            <div class="font-medium">Day/Night</div>
+            <div class="text-xs text-text-secondary">2 rates: Day & Night</div>
+          </div>
+        </label>
+
+        <label class="flex items-center gap-3 p-3 bg-background rounded-xl cursor-pointer border border-transparent hover:border-slate-600">
+          <input type="radio" name="tariff_type" class="w-4 h-4 text-solar accent-solar"/>
+          <div>
+            <div class="font-medium">Day/Night/Peak</div>
+            <div class="text-xs text-text-secondary">3 rates: Day, Night & Peak</div>
+          </div>
+        </label>
+
+        <label class="flex items-center gap-3 p-3 bg-background rounded-xl cursor-pointer border border-transparent hover:border-slate-600">
+          <input type="radio" name="tariff_type" class="w-4 h-4 text-solar accent-solar"/>
+          <div>
+            <div class="font-medium">Day/Night/Peak/EV</div>
+            <div class="text-xs text-text-secondary">4 rates: includes EV overnight</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Rate Periods -->
+    <div class="bg-surface rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <label class="text-sm font-medium text-text-secondary">Rate Periods</label>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Day Rate -->
+        <div class="bg-background rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-solar"></div>
+              <span class="font-medium">Day</span>
+            </div>
+            <span class="text-xs text-text-secondary">08:00 - 23:00</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-text-secondary mb-1 block">Rate (€/kWh)</label>
+              <input
+                type="number"
+                value="0.4383"
+                step="0.0001"
+                class="w-full px-3 py-2 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label class="text-xs text-text-secondary mb-1 block">Hours</label>
+              <div class="flex gap-1 items-center">
+                <input
+                  type="time"
+                  value="08:00"
+                  class="flex-1 px-2 py-2 rounded-lg text-sm"
+                />
+                <span class="text-text-secondary">-</span>
+                <input
+                  type="time"
+                  value="23:00"
+                  class="flex-1 px-2 py-2 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Night Rate -->
+        <div class="bg-background rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-consumption"></div>
+              <span class="font-medium">Night</span>
+            </div>
+            <span class="text-xs text-text-secondary">23:00 - 08:00</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-text-secondary mb-1 block">Rate (€/kWh)</label>
+              <input
+                type="number"
+                value="0.2341"
+                step="0.0001"
+                class="w-full px-3 py-2 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label class="text-xs text-text-secondary mb-1 block">Hours</label>
+              <div class="flex gap-1 items-center">
+                <input
+                  type="time"
+                  value="23:00"
+                  class="flex-1 px-2 py-2 rounded-lg text-sm"
+                />
+                <span class="text-text-secondary">-</span>
+                <input
+                  type="time"
+                  value="08:00"
+                  class="flex-1 px-2 py-2 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rate Schedule Preview -->
+    <div class="bg-surface rounded-2xl p-4">
+      <label class="block text-sm font-medium text-text-secondary mb-3">24-Hour Preview</label>
+
+      <div class="relative h-10 rounded-lg overflow-hidden flex">
+        <!-- Night (00:00 - 08:00) -->
+        <div class="bg-consumption/60 h-full flex items-center justify-center text-xs font-medium" style="width: 33.33%">
+          Night €0.23
+        </div>
+        <!-- Day (08:00 - 23:00) -->
+        <div class="bg-solar/60 h-full flex items-center justify-center text-xs font-medium" style="width: 62.5%">
+          Day €0.44
+        </div>
+        <!-- Night (23:00 - 00:00) -->
+        <div class="bg-consumption/60 h-full flex items-center justify-center text-xs font-medium" style="width: 4.17%">
+        </div>
+      </div>
+
+      <div class="flex justify-between mt-2 text-xs text-text-secondary">
+        <span>00:00</span>
+        <span>06:00</span>
+        <span>12:00</span>
+        <span>18:00</span>
+        <span>24:00</span>
+      </div>
+    </div>
+
+    <!-- Export Rate -->
+    <div class="bg-surface rounded-2xl p-4">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-3 h-3 rounded-full bg-grid-export"></div>
+        <label class="text-sm font-medium text-text-secondary">Export Rate</label>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="flex-1">
+          <input
+            type="number"
+            value="0.10"
+            step="0.01"
+            class="w-full px-4 py-3 rounded-xl"
+          />
+        </div>
+        <span class="text-text-secondary">€/kWh</span>
+      </div>
+
+      <p class="text-xs text-text-secondary mt-2">Rate paid for electricity exported to the grid</p>
+    </div>
+
+    <!-- Standing & Fixed Charges -->
+    <div class="bg-surface rounded-2xl p-4">
+      <label class="block text-sm font-medium text-text-secondary mb-3">Fixed Charges</label>
+
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-text-secondary mb-1 block">Standing Charge</label>
+            <input
+              type="number"
+              value="0.7018"
+              step="0.0001"
+              class="w-full px-3 py-2 rounded-lg text-sm"
+            />
+          </div>
+          <span class="text-text-secondary text-sm mt-5">€/day</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-text-secondary mb-1 block">PSO Levy</label>
+            <input
+              type="number"
+              value="0.00"
+              step="0.01"
+              class="w-full px-3 py-2 rounded-lg text-sm"
+            />
+          </div>
+          <span class="text-text-secondary text-sm mt-5">€/month</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Valid Dates -->
+    <div class="bg-surface rounded-2xl p-4">
+      <label class="block text-sm font-medium text-text-secondary mb-3">Valid Period</label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-text-secondary mb-1 block">From</label>
+          <input
+            type="date"
+            value="2025-01-01"
+            class="w-full px-3 py-2 rounded-lg text-sm"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-text-secondary mb-1 block">To (optional)</label>
+          <input
+            type="date"
+            class="w-full px-3 py-2 rounded-lg text-sm"
+            placeholder="Current"
+          />
+        </div>
+      </div>
+
+      <p class="text-xs text-text-secondary mt-2">Leave 'To' empty if this is your current tariff</p>
+    </div>
+
+    <!-- Historical Tariffs -->
+    <div class="bg-surface rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <label class="text-sm font-medium text-text-secondary">Tariff History</label>
+        <button class="text-solar text-sm">+ Add Past Tariff</button>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between p-3 bg-background rounded-xl">
+          <div>
+            <div class="font-medium text-sm">SSE Airtricity - Eco+</div>
+            <div class="text-xs text-text-secondary">1 Jul 2024 - 31 Dec 2024</div>
+          </div>
+          <svg class="w-5 h-5 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </div>
+
+        <div class="flex items-center justify-between p-3 bg-background rounded-xl">
+          <div>
+            <div class="font-medium text-sm">Bord Gáis - Solar Plan</div>
+            <div class="text-xs text-text-secondary">1 Jan 2024 - 30 Jun 2024</div>
+          </div>
+          <svg class="w-5 h-5 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <button class="w-full bg-solar text-background font-semibold py-4 rounded-xl hover:bg-amber-400 transition-colors">
+      Save Tariff
+    </button>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 h-16 bg-surface border-t border-slate-700 flex items-center justify-around px-2 z-50">
+    <a href="01-dashboard.html" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="9" rx="1"/>
+        <rect x="14" y="3" width="7" height="5" rx="1"/>
+        <rect x="14" y="12" width="7" height="9" rx="1"/>
+        <rect x="3" y="16" width="7" height="5" rx="1"/>
+      </svg>
+      <span class="text-xs">Dashboard</span>
+    </a>
+
+    <a href="02-charts.html" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 3v18h18"/>
+        <path d="M18 9l-5 5-4-4-3 3"/>
+      </svg>
+      <span class="text-xs">Charts</span>
+    </a>
+
+    <a href="03-tariffs.html" class="flex flex-col items-center gap-1 px-3 py-2 text-solar">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M12 8v8M8 12h8"/>
+      </svg>
+      <span class="text-xs font-medium">Tariffs</span>
+    </a>
+
+    <a href="04-compare.html" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 3H5a2 2 0 0 0-2 2v4"/>
+        <path d="M15 3h4a2 2 0 0 1 2 2v4"/>
+        <path d="M9 21H5a2 2 0 0 1-2-2v-4"/>
+        <path d="M15 21h4a2 2 0 0 0 2-2v-4"/>
+        <path d="M12 7v10"/>
+      </svg>
+      <span class="text-xs">Compare</span>
+    </a>
+
+    <a href="#" class="flex flex-col items-center gap-1 px-3 py-2 text-text-secondary hover:text-text-primary">
+      <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="1"/>
+        <circle cx="12" cy="5" r="1"/>
+        <circle cx="12" cy="19" r="1"/>
+      </svg>
+      <span class="text-xs">More</span>
+    </a>
+  </nav>
+
+</body>
+</html>
