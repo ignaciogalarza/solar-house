@@ -326,6 +326,36 @@ export default function ChartsPage() {
         </div>
       ) : (
         <>
+          {/* Cumulative Totals */}
+          {totals && (
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-[#1E293B] rounded-xl p-3 text-center">
+                <div className="text-[#F59E0B] text-xl font-bold tabular-nums">
+                  {totals.generationKwh.toFixed(1)}
+                </div>
+                <div className="text-[10px] text-[#94A3B8] uppercase tracking-wide">Gen kWh</div>
+              </div>
+              <div className="bg-[#1E293B] rounded-xl p-3 text-center">
+                <div className="text-[#3B82F6] text-xl font-bold tabular-nums">
+                  {totals.consumptionKwh.toFixed(1)}
+                </div>
+                <div className="text-[10px] text-[#94A3B8] uppercase tracking-wide">Used kWh</div>
+              </div>
+              <div className="bg-[#1E293B] rounded-xl p-3 text-center">
+                <div className="text-[#10B981] text-xl font-bold tabular-nums">
+                  {totals.exportKwh.toFixed(1)}
+                </div>
+                <div className="text-[10px] text-[#94A3B8] uppercase tracking-wide">Exp kWh</div>
+              </div>
+              <div className="bg-[#1E293B] rounded-xl p-3 text-center">
+                <div className="text-[#EF4444] text-xl font-bold tabular-nums">
+                  {totals.importKwh.toFixed(1)}
+                </div>
+                <div className="text-[10px] text-[#94A3B8] uppercase tracking-wide">Imp kWh</div>
+              </div>
+            </div>
+          )}
+
           {/* Power Area Chart */}
           <div className="bg-[#1E293B] rounded-2xl p-5">
             <h2 className="text-sm font-medium text-[#94A3B8] mb-4">{getChartTitle()}</h2>
