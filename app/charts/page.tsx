@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { PeriodSelector } from '@/components/charts/PeriodSelector';
 import PowerAreaChart from '@/components/charts/PowerAreaChart';
 import EnergyBarChart from '@/components/charts/EnergyBarChart';
@@ -40,13 +40,43 @@ interface ApiResponse {
   error?: string;
 }
 
+type Period = 'day' | 'week' | 'month' | 'year';
+
+// Helper to get date string
+const toDateString = (d: Date) => d.toISOString().split('T')[0];
+const today = () => toDateString(new Date());
+const yesterday = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return toDateString(d);
+};
+const daysAgo = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return toDateString(d);
+};
+
+interface QuickPreset {
+  label: string;
+  getDate: () => string;
+  period: Period;
+}
+
+const quickPresets: QuickPreset[] = [
+  { label: 'Today', getDate: today, period: 'day' },
+  { label: 'Yesterday', getDate: yesterday, period: 'day' },
+  { label: 'Last 7 days', getDate: yesterday, period: 'week' },
+  { label: 'Last 30 days', getDate: yesterday, period: 'month' },
+];
+
 export default function ChartsPage() {
-  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('day');
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [period, setPeriod] = useState<Period>('day');
+  const [date, setDate] = useState<string>(today());
   const [readings, setReadings] = useState<HourlyReading[] | DailyReading[]>([]);
   const [totals, setTotals] = useState<DailyTotals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,42 +115,54 @@ export default function ChartsPage() {
   };
 
   const handlePrevDate = () => {
-    const currentDate = new Date(date);
+    const currentDate = new Date(date + 'T00:00:00');
     currentDate.setDate(currentDate.getDate() - getDaysToAdd());
-    setDate(currentDate.toISOString().split('T')[0]);
+    setDate(toDateString(currentDate));
   };
 
   const handleNextDate = () => {
-    const currentDate = new Date(date);
+    const currentDate = new Date(date + 'T00:00:00');
     currentDate.setDate(currentDate.getDate() + getDaysToAdd());
-    setDate(currentDate.toISOString().split('T')[0]);
+    setDate(toDateString(currentDate));
   };
 
-  const handleToday = () => {
-    setDate(new Date().toISOString().split('T')[0]);
+  const handlePreset = (preset: QuickPreset) => {
+    setDate(preset.getDate());
+    setPeriod(preset.period);
   };
 
-  const isToday = date === new Date().toISOString().split('T')[0];
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value) {
+      setDate(e.target.value);
+    }
+  };
+
+  const openDatePicker = () => {
+    dateInputRef.current?.showPicker();
+  };
+
+  const isToday = date === today();
 
   const getDateRangeText = () => {
     const currentDate = new Date(date + 'T00:00:00');
-    
+
     switch (period) {
       case 'day':
         return currentDate.toLocaleDateString('en-US', {
+          weekday: 'short',
           month: 'short',
           day: 'numeric',
           year: 'numeric',
         });
-      
+
       case 'week': {
         const endDate = new Date(currentDate);
         const startDate = new Date(currentDate);
         startDate.setDate(startDate.getDate() - 6);
-        
+
         const sameYear = startDate.getFullYear() === endDate.getFullYear();
         const sameMonth = startDate.getMonth() === endDate.getMonth();
-        
+
         if (sameYear && sameMonth) {
           const start = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           const end = endDate.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' });
@@ -135,14 +177,14 @@ export default function ChartsPage() {
           return `${start} - ${end}`;
         }
       }
-      
+
       case 'month': {
         const endDate = new Date(currentDate);
         const startDate = new Date(currentDate);
         startDate.setDate(startDate.getDate() - 29);
-        
+
         const sameYear = startDate.getFullYear() === endDate.getFullYear();
-        
+
         if (sameYear) {
           const start = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           const end = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -153,33 +195,23 @@ export default function ChartsPage() {
           return `${start} - ${end}`;
         }
       }
-      
+
       case 'year': {
         const endDate = new Date(currentDate);
         const startDate = new Date(currentDate);
         startDate.setDate(startDate.getDate() - 364);
-        
-        const start = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const end = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        const start = startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const end = endDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         return `${start} - ${end}`;
       }
-      
+
       default:
         return currentDate.toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
           year: 'numeric',
         });
-    }
-  };
-
-  const getPeriodLabel = () => {
-    switch (period) {
-      case 'day': return 'Selected Date';
-      case 'week': return 'Selected Week';
-      case 'month': return 'Selected Month';
-      case 'year': return 'Selected Year';
-      default: return 'Selected Date';
     }
   };
 
@@ -203,10 +235,22 @@ export default function ChartsPage() {
     }
   };
 
+  // Check which preset is currently active
+  const getActivePreset = () => {
+    for (const preset of quickPresets) {
+      if (preset.getDate() === date && preset.period === period) {
+        return preset.label;
+      }
+    }
+    return null;
+  };
+
+  const activePreset = getActivePreset();
+
   return (
-    <div className="px-4 py-4 space-y-4">
-      {/* Header with Date Navigation */}
-      <div className="bg-[#1E293B] rounded-2xl p-5">
+    <div className="px-4 py-4 space-y-3">
+      {/* Date Navigation Header */}
+      <div className="bg-[#1E293B] rounded-2xl p-4">
         <div className="flex items-center justify-between">
           <button
             onClick={handlePrevDate}
@@ -216,20 +260,16 @@ export default function ChartsPage() {
             <ChevronLeft className="w-5 h-5 text-[#94A3B8]" />
           </button>
 
-          <div className="flex flex-col items-center">
-            <p className="text-sm text-[#94A3B8]">{getPeriodLabel()}</p>
-            <p className="text-lg font-semibold text-[#F8FAFC] text-center">
+          {/* Clickable date - opens calendar */}
+          <button
+            onClick={openDatePicker}
+            className="flex items-center gap-2 px-3 py-2 hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            <Calendar className="w-4 h-4 text-[#F59E0B]" />
+            <span className="text-lg font-semibold text-[#F8FAFC]">
               {getDateRangeText()}
-            </p>
-            {!isToday && (
-              <button
-                onClick={handleToday}
-                className="text-xs text-[#F59E0B] hover:text-[#FBBF24] mt-1 transition-colors"
-              >
-                Go to Today
-              </button>
-            )}
-          </div>
+            </span>
+          </button>
 
           <button
             onClick={handleNextDate}
@@ -239,6 +279,33 @@ export default function ChartsPage() {
             <ChevronRight className="w-5 h-5 text-[#94A3B8]" />
           </button>
         </div>
+
+        {/* Hidden date input */}
+        <input
+          ref={dateInputRef}
+          type="date"
+          value={date}
+          onChange={handleDateChange}
+          max={today()}
+          className="sr-only"
+        />
+      </div>
+
+      {/* Quick Presets */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+        {quickPresets.map((preset) => (
+          <button
+            key={preset.label}
+            onClick={() => handlePreset(preset)}
+            className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+              activePreset === preset.label
+                ? 'bg-[#F59E0B] text-[#0F172A] font-medium'
+                : 'bg-[#1E293B] text-[#94A3B8] hover:bg-slate-700'
+            }`}
+          >
+            {preset.label}
+          </button>
+        ))}
       </div>
 
       {/* Period Selector */}
