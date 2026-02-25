@@ -1,65 +1,160 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import {
+  PowerGauge,
+  EnergyFlow,
+  DeviceCard,
+  TodaySummary,
+} from "@/components/dashboard";
+
+interface EnergyData {
+  solarW: number;
+  gridW: number;
+  consumptionW: number;
+  evChargingW: number;
+  hotWaterW: number;
+  zappiStatus: string;
+  eddiStatus: string;
+  eddiTempC?: number;
+  timestamp: string;
+}
+
+interface DailyTotals {
+  generatedKwh: number;
+  consumedKwh: number;
+  exportedKwh: number;
+  importedKwh: number;
+  evChargedKwh: number;
+  hotWaterKwh: number;
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState<EnergyData | null>(null);
+  const [dailyTotals, setDailyTotals] = useState<DailyTotals | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [currentRes, todayRes] = await Promise.all([
+          fetch("/api/energy/current"),
+          fetch("/api/energy/today"),
+        ]);
+
+        const currentJson = await currentRes.json();
+        const todayJson = await todayRes.json();
+
+        if (currentJson.success) {
+          setData(currentJson.data);
+        }
+        if (todayJson.success) {
+          setDailyTotals(todayJson.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch energy data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+
+    // Refresh every 10 seconds
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="px-4 py-4 space-y-4">
+        <div className="bg-surface rounded-2xl p-8 animate-pulse">
+          <div className="h-40 bg-slate-700 rounded-lg"></div>
+        </div>
+        <div className="bg-surface rounded-2xl p-8 animate-pulse">
+          <div className="h-48 bg-slate-700 rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="px-4 py-4">
+        <div className="bg-surface rounded-2xl p-8 text-center">
+          <p className="text-text-secondary">Failed to load energy data</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="px-4 py-4 space-y-4">
+      {/* Power Gauge */}
+      <PowerGauge
+        gridW={data.gridW}
+        solarW={data.solarW}
+        consumptionW={data.consumptionW}
+        generatedKwh={dailyTotals?.generatedKwh ?? 0}
+        consumedKwh={dailyTotals?.consumedKwh ?? 0}
+        exportedKwh={dailyTotals?.exportedKwh ?? 0}
+        importedKwh={dailyTotals?.importedKwh ?? 0}
+      />
+
+      {/* Energy Flow Diagram */}
+      <EnergyFlow
+        solarW={data.solarW}
+        gridW={data.gridW}
+        consumptionW={data.consumptionW}
+        evChargingW={data.evChargingW}
+        hotWaterW={data.hotWaterW}
+        eddiTempC={data.eddiTempC}
+      />
+
+      {/* Device Status Cards */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-text-secondary">Devices</h2>
+
+        <DeviceCard
+          name="Zappi"
+          type="EV Charger"
+          status={data.zappiStatus.split(" - ")[0] || "Eco+"}
+          detail={data.zappiStatus.split(" - ")[1] || ""}
+          variant="zappi"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        <DeviceCard
+          name="Eddi"
+          type="Hot Water"
+          status={data.eddiTempC ? `${data.eddiTempC}°C` : "—"}
+          detail={
+            data.hotWaterW > 50
+              ? `Diverting ${(data.hotWaterW / 1000).toFixed(1)}kW`
+              : data.eddiStatus
+          }
+          variant="eddi"
+        />
+
+        <DeviceCard
+          name="Harvi"
+          type="CT Monitor"
+          status="Online"
+          detail="3 CTs active"
+          variant="harvi"
+        />
+      </div>
+
+      {/* Today's Summary */}
+      {dailyTotals && (
+        <TodaySummary
+          generatedKwh={dailyTotals.generatedKwh}
+          consumedKwh={dailyTotals.consumedKwh}
+          exportedKwh={dailyTotals.exportedKwh}
+          importedKwh={dailyTotals.importedKwh}
+          exportRate={0.21}
+          importRate={0.43}
+        />
+      )}
     </div>
   );
 }
