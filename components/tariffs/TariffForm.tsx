@@ -583,80 +583,95 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
         </label>
 
         <div className="space-y-3">
-          {periods.map((period, index) => (
-            <div key={index} className="bg-[#0F172A] rounded-xl p-4">
-              {/* Period Header: Shows period name, color indicator, and time range */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  {/* Color indicator dot */}
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: period.color }}
-                  />
-                  {/* Period name (capitalized) */}
-                  <span className="font-medium text-[#F8FAFC] capitalize">
-                    {period.name}
-                  </span>
-                </div>
-                {/* Time range display */}
-                <span className="text-xs text-[#94A3B8]">
-                  {period.startTime} - {period.endTime}
-                </span>
-              </div>
+          {/* Group periods by name to combine same-rate intervals */}
+          {(() => {
+            // Group periods by name, preserving order of first occurrence
+            const grouped: { name: string; color: string; indices: number[] }[] = [];
+            periods.forEach((period, index) => {
+              const existing = grouped.find(g => g.name === period.name);
+              if (existing) {
+                existing.indices.push(index);
+              } else {
+                grouped.push({ name: period.name, color: period.color, indices: [index] });
+              }
+            });
 
-              {/* Period Input Fields: Rate and Time inputs */}
-              <div className="grid grid-cols-[1fr_2fr] gap-3">
-                {/* Rate Input */}
-                <div>
-                  <label className="text-xs text-[#94A3B8] mb-1 block">
-                    Rate (€/kWh)
-                  </label>
-                  <input
-                    type="number"
-                    value={period.rate}
-                    onChange={(e) => updatePeriod(index, 'rate', parseFloat(e.target.value) || 0)}
-                    step="0.0001"
-                    min="0"
-                    className={`w-full px-3 py-2 rounded-lg bg-[#1E293B] border ${
-                      errors[`period_${index}_rate`] ? 'border-red-500' : 'border-[#334155]'
-                    } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20`}
-                  />
-                  {errors[`period_${index}_rate`] && (
-                    <p className="mt-1 text-xs text-red-500">{errors[`period_${index}_rate`]}</p>
-                  )}
-                </div>
+            return grouped.map((group) => {
+              const firstIndex = group.indices[0];
+              const firstPeriod = periods[firstIndex];
 
-                {/* Time Range Inputs */}
-                <div>
-                  <label className="text-xs text-[#94A3B8] mb-1 block">
-                    Hours
-                  </label>
-                  <div className="flex gap-1 items-center">
-                    {/* Start Time */}
+              return (
+                <div key={group.name} className="bg-[#0F172A] rounded-xl p-4">
+                  {/* Period Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: group.color }}
+                      />
+                      <span className="font-medium text-[#F8FAFC] capitalize">
+                        {group.name}
+                      </span>
+                    </div>
+                    {/* Show all time ranges for this period type */}
+                    <span className="text-xs text-[#94A3B8]">
+                      {group.indices.map(i => `${periods[i].startTime}-${periods[i].endTime}`).join(', ')}
+                    </span>
+                  </div>
+
+                  {/* Rate input (shared for all intervals of same name) */}
+                  <div className="mb-3">
+                    <label className="text-xs text-[#94A3B8] mb-1 block">
+                      Rate (€/kWh)
+                    </label>
                     <input
-                      type="time"
-                      value={period.startTime}
-                      onChange={(e) => updatePeriod(index, 'startTime', e.target.value)}
-                      className={`flex-1 min-w-0 px-2 py-2 rounded-lg bg-[#1E293B] border ${
-                        errors[`period_${index}_start`] ? 'border-red-500' : 'border-[#334155]'
-                      } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20`}
-                    />
-                    {/* Separator */}
-                    <span className="text-[#94A3B8] flex-shrink-0">-</span>
-                    {/* End Time */}
-                    <input
-                      type="time"
-                      value={period.endTime}
-                      onChange={(e) => updatePeriod(index, 'endTime', e.target.value)}
-                      className={`flex-1 min-w-0 px-2 py-2 rounded-lg bg-[#1E293B] border ${
-                        errors[`period_${index}_end`] ? 'border-red-500' : 'border-[#334155]'
+                      type="number"
+                      value={firstPeriod.rate}
+                      onChange={(e) => {
+                        // Update rate for ALL periods with same name
+                        const newRate = parseFloat(e.target.value) || 0;
+                        group.indices.forEach(i => updatePeriod(i, 'rate', newRate));
+                      }}
+                      step="0.0001"
+                      min="0"
+                      className={`w-32 px-3 py-2 rounded-lg bg-[#1E293B] border ${
+                        errors[`period_${firstIndex}_rate`] ? 'border-red-500' : 'border-[#334155]'
                       } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20`}
                     />
                   </div>
+
+                  {/* Time intervals */}
+                  <div className="space-y-2">
+                    <label className="text-xs text-[#94A3B8] block">
+                      Time Intervals
+                    </label>
+                    {group.indices.map((periodIndex, i) => (
+                      <div key={periodIndex} className="flex gap-2 items-center">
+                        <span className="text-xs text-[#64748B] w-4">{i + 1}.</span>
+                        <input
+                          type="time"
+                          value={periods[periodIndex].startTime}
+                          onChange={(e) => updatePeriod(periodIndex, 'startTime', e.target.value)}
+                          className={`flex-1 min-w-0 px-2 py-2 rounded-lg bg-[#1E293B] border ${
+                            errors[`period_${periodIndex}_start`] ? 'border-red-500' : 'border-[#334155]'
+                          } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B]`}
+                        />
+                        <span className="text-[#94A3B8]">-</span>
+                        <input
+                          type="time"
+                          value={periods[periodIndex].endTime}
+                          onChange={(e) => updatePeriod(periodIndex, 'endTime', e.target.value)}
+                          className={`flex-1 min-w-0 px-2 py-2 rounded-lg bg-[#1E293B] border ${
+                            errors[`period_${periodIndex}_end`] ? 'border-red-500' : 'border-[#334155]'
+                          } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B]`}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            });
+          })()}
         </div>
       </div>
 
