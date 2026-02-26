@@ -605,7 +605,7 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
               </div>
 
               {/* Period Input Fields: Rate and Time inputs */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-[1fr_2fr] gap-3">
                 {/* Rate Input */}
                 <div>
                   <label className="text-xs text-[#94A3B8] mb-1 block">
