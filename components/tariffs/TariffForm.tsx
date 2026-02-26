@@ -617,7 +617,7 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
                     onChange={(e) => updatePeriod(index, 'rate', parseFloat(e.target.value) || 0)}
                     step="0.0001"
                     min="0"
-                    className={`w-full px-3 py-2 rounded-lg bg-[#0F172A] border ${
+                    className={`w-full px-3 py-2 rounded-lg bg-[#1E293B] border ${
                       errors[`period_${index}_rate`] ? 'border-red-500' : 'border-[#334155]'
                     } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20`}
                   />
@@ -637,18 +637,18 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
                       type="time"
                       value={period.startTime}
                       onChange={(e) => updatePeriod(index, 'startTime', e.target.value)}
-                      className={`flex-1 px-2 py-2 rounded-lg bg-[#0F172A] border ${
+                      className={`flex-1 min-w-0 px-2 py-2 rounded-lg bg-[#1E293B] border ${
                         errors[`period_${index}_start`] ? 'border-red-500' : 'border-[#334155]'
                       } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20`}
                     />
                     {/* Separator */}
-                    <span className="text-[#94A3B8]">-</span>
+                    <span className="text-[#94A3B8] flex-shrink-0">-</span>
                     {/* End Time */}
                     <input
                       type="time"
                       value={period.endTime}
                       onChange={(e) => updatePeriod(index, 'endTime', e.target.value)}
-                      className={`flex-1 px-2 py-2 rounded-lg bg-[#0F172A] border ${
+                      className={`flex-1 min-w-0 px-2 py-2 rounded-lg bg-[#1E293B] border ${
                         errors[`period_${index}_end`] ? 'border-red-500' : 'border-[#334155]'
                       } text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20`}
                     />
