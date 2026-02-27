@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * =============================================================================
@@ -33,6 +33,8 @@ interface Tariff {
   isCurrent: boolean;
   exportRate: number;
   standingCharge: number;
+  psoLevy?: number;
+  vatRate?: number;
   validFrom: string;       // ISO date string 'YYYY-MM-DD'
   validTo?: string;        // ISO date string 'YYYY-MM-DD' or null
   periods: TariffPeriod[]; // Associated time-based pricing periods
@@ -48,6 +50,8 @@ interface TariffFormData {
   tariffType: 'single' | 'day_night' | 'day_night_peak' | 'day_night_peak_ev';
   exportRate: number;
   standingCharge: number;
+  psoLevy?: number;
+  vatRate?: number;
   validFrom: string;
   validTo?: string;
   periods: TariffPeriod[];
@@ -241,6 +245,8 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
   );
   const [exportRate, setExportRate] = useState(initialData?.exportRate || 0.10);
   const [standingCharge, setStandingCharge] = useState(initialData?.standingCharge || 0.70);
+  const [psoLevy, setPsoLevy] = useState(initialData?.psoLevy || 0);
+  const [vatRate, setVatRate] = useState(initialData?.vatRate || 9);
   const [validFrom, setValidFrom] = useState(initialData?.validFrom || '');
   const [validTo, setValidTo] = useState(initialData?.validTo || '');
   
@@ -264,25 +270,37 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
    * ---------------------------------------------------------------------------
    */
 
+  // Track previous tariffType to detect user changes
+  const prevTariffType = useRef(tariffType);
+
   /**
-   * Effect: Update periods when tariff type changes
-   * 
-   * When the user selects a different tariff type, we need to:
-   * 1. Load the appropriate default periods for that type
-   * 2. Preserve any custom rates the user may have set
-   * 
-   * This only triggers on user selection, not on initial mount
+   * Effect: Reset form when initialData changes (editing different tariff)
    */
   useEffect(() => {
-    // Skip on initial mount - we already have initialData or defaults
-    if (initialData?.tariffType === tariffType) return;
+    setProviderName(initialData?.providerName || '');
+    setTariffName(initialData?.tariffName || '');
+    setTariffType(initialData?.tariffType || 'day_night');
+    setExportRate(initialData?.exportRate || 0.10);
+    setStandingCharge(initialData?.standingCharge || 0.70);
+    setPsoLevy(initialData?.psoLevy || 0);
+    setVatRate(initialData?.vatRate || 9);
+    setValidFrom(initialData?.validFrom || '');
+    setValidTo(initialData?.validTo || '');
+    setPeriods(initialData?.periods || DEFAULT_PERIODS[initialData?.tariffType || 'day_night']);
+    setErrors({});
+    prevTariffType.current = initialData?.tariffType || 'day_night';
+  }, [initialData]);
 
-    // Get default periods for the newly selected type
-    const newPeriods = DEFAULT_PERIODS[tariffType];
-    
-    // Update state with new period structure
-    setPeriods(newPeriods);
-  }, [tariffType]); // Dependency: only run when tariffType changes
+  /**
+   * Effect: Update periods when user changes tariff type
+   */
+  useEffect(() => {
+    // Only reset if tariffType actually changed from previous value
+    if (prevTariffType.current !== tariffType) {
+      setPeriods(DEFAULT_PERIODS[tariffType]);
+      prevTariffType.current = tariffType;
+    }
+  }, [tariffType]);
 
   /**
    * ---------------------------------------------------------------------------
@@ -379,8 +397,10 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
       tariffType,
       exportRate,
       standingCharge,
+      psoLevy: psoLevy || undefined,
+      vatRate: vatRate || undefined,
       validFrom,
-      validTo: validTo || undefined, // Send undefined if empty (not null)
+      validTo: validTo || undefined,
       periods,
     };
 
@@ -543,6 +563,11 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
           {(Object.keys(TARIFF_TYPE_LABELS) as TariffFormData['tariffType'][]).map((type) => (
             <label
               key={type}
+              onClick={() => {
+                // Always reset periods to defaults when clicking a type
+                setPeriods(DEFAULT_PERIODS[type]);
+                setTariffType(type);
+              }}
               className={`flex items-center gap-3 p-3 bg-[#0F172A] rounded-xl cursor-pointer border-2 transition-colors ${
                 tariffType === type
                   ? 'border-[#F59E0B]'
@@ -554,7 +579,7 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
                 name="tariff_type"
                 value={type}
                 checked={tariffType === type}
-                onChange={(e) => setTariffType(e.target.value as TariffFormData['tariffType'])}
+                readOnly
                 className="w-4 h-4 text-[#F59E0B] accent-[#F59E0B]"
               />
               <div>
@@ -628,9 +653,10 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
                       type="number"
                       value={firstPeriod.rate}
                       onChange={(e) => {
-                        // Update rate for ALL periods with same name
                         const newRate = parseFloat(e.target.value) || 0;
-                        group.indices.forEach(i => updatePeriod(i, 'rate', newRate));
+                        setPeriods(prev => prev.map((p, i) =>
+                          group.indices.includes(i) ? { ...p, rate: newRate } : p
+                        ));
                       }}
                       step="0.0001"
                       min="0"
@@ -743,7 +769,7 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
               type="number"
               value={exportRate}
               onChange={(e) => setExportRate(parseFloat(e.target.value) || 0)}
-              step="0.01"
+              step="0.0001"
               min="0"
               className={`w-full px-4 py-3 rounded-xl bg-[#0F172A] border ${
                 errors.exportRate ? 'border-red-500' : 'border-[#334155]'
@@ -795,9 +821,40 @@ export default function TariffForm({ initialData, onSave, onCancel }: TariffForm
         {errors.standingCharge && (
           <p className="mt-1 text-sm text-red-500">{errors.standingCharge}</p>
         )}
+
+        {/* PSO Levy and VAT Rate */}
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <div>
+            <label className="text-xs text-[#94A3B8] mb-1 block">
+              PSO Levy (€/month)
+            </label>
+            <input
+              type="number"
+              value={psoLevy}
+              onChange={(e) => setPsoLevy(parseFloat(e.target.value) || 0)}
+              step="0.01"
+              min="0"
+              className="w-full px-3 py-2 rounded-lg bg-[#0F172A] border border-[#334155] text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B]"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-[#94A3B8] mb-1 block">
+              VAT Rate (%)
+            </label>
+            <input
+              type="number"
+              value={vatRate}
+              onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+              step="0.1"
+              min="0"
+              max="100"
+              className="w-full px-3 py-2 rounded-lg bg-[#0F172A] border border-[#334155] text-[#F8FAFC] text-sm focus:outline-none focus:border-[#F59E0B]"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* 
+      {/*
         =======================================================================
         SECTION: Valid Period
         =======================================================================

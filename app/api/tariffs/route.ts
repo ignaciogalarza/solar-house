@@ -26,6 +26,8 @@ interface TariffRequestBody {
   isCurrent: boolean;
   exportRate: number;      // Rate for exporting energy to grid (€/kWh)
   standingCharge: number;  // Daily standing charge (€/day)
+  psoLevy?: number;        // Monthly PSO levy in EUR (optional)
+  vatRate?: number;        // VAT percentage e.g. 9 for 9% (optional)
   validFrom: string;       // Start date in 'YYYY-MM-DD' format
   validTo?: string;        // Optional end date in 'YYYY-MM-DD' format
   periods: TariffPeriodInput[];
@@ -193,6 +195,8 @@ export async function POST(request: NextRequest) {
         isCurrent: body.isCurrent,
         exportRate: body.exportRate,
         standingCharge: body.standingCharge,
+        psoLevy: body.psoLevy ?? null,
+        vatRate: body.vatRate ?? null,
         validFrom: body.validFrom,
         validTo: body.validTo || null,
       })
@@ -350,6 +354,8 @@ export async function PUT(request: NextRequest) {
         isCurrent: body.isCurrent,
         exportRate: body.exportRate,
         standingCharge: body.standingCharge,
+        psoLevy: body.psoLevy ?? null,
+        vatRate: body.vatRate ?? null,
         validFrom: body.validFrom,
         validTo: body.validTo || null,
       })

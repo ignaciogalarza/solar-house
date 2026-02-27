@@ -20,6 +20,8 @@ export const electricityTariffs = sqliteTable('electricity_tariffs', {
   isCurrent: integer('is_current', { mode: 'boolean' }).default(false),
   exportRate: real('export_rate'),
   standingCharge: real('standing_charge'),
+  psoLevy: real('pso_levy'),           // Monthly PSO levy in EUR (optional)
+  vatRate: real('vat_rate'),           // VAT percentage e.g. 9 for 9% (optional)
   validFrom: text('valid_from').notNull(),
   validTo: text('valid_to'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),

@@ -35,6 +35,8 @@ interface Tariff {
   isCurrent: boolean;
   exportRate: number;
   standingCharge: number;
+  psoLevy?: number;        // Monthly PSO levy in EUR
+  vatRate?: number;        // VAT percentage (e.g. 9 for 9%)
   validFrom: string;       // ISO date string 'YYYY-MM-DD'
   validTo?: string;        // ISO date string 'YYYY-MM-DD' or null
   periods: TariffPeriod[]; // Associated time-based pricing periods
@@ -50,6 +52,8 @@ interface TariffFormData {
   tariffType: 'single' | 'day_night' | 'day_night_peak' | 'day_night_peak_ev';
   exportRate: number;
   standingCharge: number;
+  psoLevy?: number;
+  vatRate?: number;
   validFrom: string;
   validTo?: string;
   periods: TariffPeriod[];
@@ -139,15 +143,14 @@ export default function TariffsPage() {
 
       // Make API request to fetch all tariffs
       const response = await fetch('/api/tariffs');
-      const result: ApiResponse<Tariff[]> = await response.json();
-
-      // Check if API response was successful
-      if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to fetch tariffs');
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to fetch tariffs');
       }
+      const tariffs = await response.json();
 
       // Update state with fetched tariffs
-      setTariffs(result.data);
+      setTariffs(tariffs);
     } catch (err) {
       // Capture error message for display
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
@@ -192,22 +195,27 @@ export default function TariffsPage() {
       // Determine if this is a create or update operation
       const isUpdate = selectedTariff !== null;
       const method = isUpdate ? 'PUT' : 'POST';
-      const url = isUpdate ? `/api/tariffs/${selectedTariff.id}` : '/api/tariffs';
+
+      // Build request body - add isCurrent (true for new, preserve for updates)
+      const body = {
+        ...formData,
+        isCurrent: isUpdate ? selectedTariff.isCurrent : true,
+        ...(isUpdate && { id: selectedTariff.id }),
+      };
 
       // Make API request to save the tariff
-      const response = await fetch(url, {
+      const response = await fetch('/api/tariffs', {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
 
-      const result: ApiResponse<Tariff> = await response.json();
-
       // Check if API response was successful
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to save tariff');
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to save tariff');
       }
 
       // Refresh the tariffs list to show the changes
@@ -227,16 +235,25 @@ export default function TariffsPage() {
 
   /**
    * Handles selection of a tariff from the history list
-   * 
-   * When user clicks on a tariff in the history list, this loads it
-   * into the form for editing. The TariffForm component will use this data
-   * to populate its fields.
-   * 
+   *
+   * Fetches the full tariff with periods from the API before loading
+   * into the form for editing.
+   *
    * @param tariff - The tariff to load into the form
    */
-  const handleSelectTariff = (tariff: Tariff) => {
-    setSelectedTariff(tariff);
-    setError(null);
+  const handleSelectTariff = async (tariff: Tariff) => {
+    try {
+      setError(null);
+      // Fetch full tariff with periods
+      const response = await fetch(`/api/tariffs?id=${tariff.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to load tariff');
+      }
+      const fullTariff = await response.json();
+      setSelectedTariff(fullTariff);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load tariff');
+    }
   };
 
   /**
@@ -248,6 +265,24 @@ export default function TariffsPage() {
   const handleCancelEdit = () => {
     setSelectedTariff(null);
     setError(null);
+  };
+
+  /**
+   * Handles tariff deletion
+   */
+  const handleDeleteTariff = async (id: number) => {
+    if (!confirm('Delete this tariff?')) return;
+    try {
+      const response = await fetch(`/api/tariffs?id=${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to delete');
+      }
+      if (selectedTariff?.id === id) setSelectedTariff(null);
+      await fetchTariffs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete');
+    }
   };
 
   /**
@@ -333,10 +368,10 @@ export default function TariffsPage() {
               <h2 className="text-sm font-medium text-[#94A3B8]">Tariff History</h2>
 
               {tariffs.map((tariff) => (
-                <button
+                <div
                   key={tariff.id}
                   onClick={() => handleSelectTariff(tariff)}
-                  className={`w-full text-left bg-[#1E293B] rounded-2xl p-4 transition-colors border-2 ${
+                  className={`w-full text-left bg-[#1E293B] rounded-2xl p-4 transition-colors border-2 cursor-pointer ${
                     selectedTariff?.id === tariff.id
                       ? 'border-[#F59E0B]'
                       : 'border-transparent hover:border-[#334155]'
@@ -375,12 +410,20 @@ export default function TariffsPage() {
                       </p>
                     </div>
 
-                    {/* Selected indicator arrow */}
-                    {selectedTariff?.id === tariff.id && (
-                      <div className="ml-2 text-[#F59E0B]">→</div>
-                    )}
+                    {/* Delete button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTariff(tariff.id);
+                      }}
+                      className="ml-2 p-2 text-[#94A3B8] hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      aria-label="Delete tariff"
+                    >
+                      <span className="text-xl font-bold">−</span>
+                    </button>
+
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
