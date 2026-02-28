@@ -1,4 +1,4 @@
-# Restart Prompt — Compare Page v2: Feedback & Fixes
+# Restart Prompt — Compare Page v2: Feedback & Fixes (Round 2)
 
 Paste this entire prompt to start a new session:
 
@@ -6,37 +6,30 @@ Paste this entire prompt to start a new session:
 
 ## Context
 
-I am building a Next.js energy monitoring dashboard called Solar House (`/home/ignacio/dev/solar-house`). Read `CLAUDE.md` for the full architecture overview and `memory/MEMORY.md` for session notes.
+I am building a Next.js energy monitoring dashboard called Solar House (`/home/ignacio/dev/solar-house`). Read `CLAUDE.md` for the full architecture overview.
 
-## What was just built
+## What was built (most recent commit: `830c2e7`)
 
-Compare Page v2 — Prospect Providers is now complete (commit `416e6fa`). Read the full design doc at `docs/plans/compare-page-v2-prospect-providers.md`.
+Compare Page v2 — Prospect Providers, with three feedback fixes applied:
 
-### What it does
+### 1. Cents input in ProspectForm
+All rate fields (import periods, export rate, standing charge) now accept user input in **cents** (e.g. `19.5` c/kWh). The form converts to euros internally before storing in the DB. The switching bonus remains in euros (flat amount). Labels show `c/kWh` and `c/day`.
 
-The **Compare page** (`/app/compare/page.tsx`) fetches all tariffs (current + prospect) from the DB and runs cost calculations against real energy usage history, showing which provider would be cheapest for a selected period.
+### 2. Rate display in RateTable
+Rates are now shown as cents: `19.50c` instead of `€0.1950`. Column headers updated to `Day (c)`, `Night (c)`, `Export (c)`.
 
-New in v2:
-- **Prospect providers** — hypothetical providers you are evaluating, stored in the DB with `isProspect: true`. They appear on the compare page only, never in billing.
-- **Inline ProspectForm** (`components/compare/ProspectForm.tsx`) — replaces the old "Add Provider" link that incorrectly went to `/tariffs`. Has fields: provider name, tariff name, dynamic rate periods (pre-filled Day/Night), export rate, standing charge, switching bonus.
-- **Per-provider switching costs** — stored in DB, editable inline on each card:
-  - `exitFee` on the current tariff (save via `PATCH /api/tariffs/[id]`)
-  - `switchingBonus` per prospect (save via `PATCH /api/prospects/[id]`)
-  - Both save on-blur; refetch compare data after save
-- **"Switch to this provider"** button on prospect cards — fetches full prospect data, POSTs to `/api/tariffs` as `isCurrent: true`, deletes the prospect, refetches
+### 3. Edit prospect after creation
+Prospect ProviderCards now have a pencil-icon **Edit** button next to the "Prospect" badge. Clicking it fetches the full prospect data from `GET /api/prospects` and opens `ProspectForm` pre-filled in edit mode. Saving calls `PATCH /api/prospects/[id]` (now supports full updates: all fields + periods). `compare/page.tsx` manages `editingProspect` state for this flow.
 
-### Key files
+### Key files (all modified in 830c2e7)
 
-- `app/compare/page.tsx` — compare page, handleSwitch, ProspectForm toggle
-- `components/compare/ProviderCard.tsx` — card with editable switching costs + switch button
-- `components/compare/ProspectForm.tsx` — inline form for adding prospect providers
-- `app/api/prospects/route.ts` — GET all / POST new prospect
-- `app/api/prospects/[id]/route.ts` — PATCH (switchingBonus) / DELETE
-- `app/api/tariffs/[id]/route.ts` — PATCH (exitFee)
-- `app/api/compare/route.ts` — returns `exitFee` at top level + `isProspect`/`switchingBonus` per comparison
-- `lib/db/schema.ts` — `electricityTariffs` now has `isProspect`, `switchingBonus`, `exitFee`
+- `components/compare/ProspectForm.tsx` — cents input, edit mode support
+- `components/compare/RateTable.tsx` — cents display
+- `components/compare/ProviderCard.tsx` — edit button + `onEdit` prop
+- `app/compare/page.tsx` — `editingProspect` state, `handleEditProspect`
+- `app/api/prospects/[id]/route.ts` — extended PATCH for full updates
 
-### Known pre-existing TypeScript errors (do not fix unless asked)
+### Pre-existing TypeScript errors (do not fix unless asked)
 
 There are pre-existing TS errors in `app/charts/page.tsx`, `components/charts/PeriodSelector.tsx`, `components/charts/PowerAreaChart.tsx`, and `lib/myenergi/client.ts`. These cause `npm run build` to fail but are unrelated to the compare page.
 
@@ -53,3 +46,5 @@ Work through each piece of feedback. For bugs, read the relevant files before ch
 - Green: `#10B981`
 - Red: `#EF4444`
 - Muted text: `text-[#94A3B8]`
+
+Create a GitHub issue for the feedback items, use the lowest capable model (haiku) where appropriate, commit changes at the end, and produce an updated version of this file for the next feedback round.
