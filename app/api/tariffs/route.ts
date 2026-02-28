@@ -100,9 +100,11 @@ export async function GET(request: NextRequest) {
 
     // MODE 2: Get all tariffs (without periods)
     // Sort order: current tariffs first (isCurrent=1), then by validFrom descending
+    // Filter out prospect tariffs from the list
     const tariffs = await db
       .select()
       .from(electricityTariffs)
+      .where(eq(electricityTariffs.isProspect, false))
       .orderBy(
         desc(electricityTariffs.isCurrent),  // Current tariffs first
         desc(electricityTariffs.validFrom)   // Then most recent first
@@ -199,6 +201,7 @@ export async function POST(request: NextRequest) {
         vatRate: body.vatRate ?? null,
         validFrom: body.validFrom,
         validTo: body.validTo || null,
+        isProspect: false,
       })
       .returning();
 

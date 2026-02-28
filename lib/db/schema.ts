@@ -22,6 +22,9 @@ export const electricityTariffs = sqliteTable('electricity_tariffs', {
   standingCharge: real('standing_charge'),
   psoLevy: real('pso_levy'),           // Monthly PSO levy in EUR (optional)
   vatRate: real('vat_rate'),           // VAT percentage e.g. 9 for 9% (optional)
+  isProspect: integer('is_prospect', { mode: 'boolean' }).default(false),
+  switchingBonus: real('switching_bonus'), // One-time credit from new provider (prospect tariffs)
+  exitFee: real('exit_fee'),              // One-time fee to leave current provider (current tariff)
   validFrom: text('valid_from').notNull(),
   validTo: text('valid_to'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
