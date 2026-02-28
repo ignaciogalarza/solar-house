@@ -7,6 +7,7 @@ interface TodaySummaryProps {
   importedKwh: number;
   exportRate?: number;
   importRate?: number;
+  estimatedBill?: number | null;
 }
 
 interface StatCardProps {
@@ -43,6 +44,7 @@ export function TodaySummary({
   importedKwh,
   exportRate = 0.1,
   importRate = 0.3,
+  estimatedBill = null,
 }: TodaySummaryProps) {
   const exportEarnings = exportedKwh * exportRate;
   const importCost = importedKwh * importRate;
@@ -96,6 +98,20 @@ export function TodaySummary({
           color="#EF4444"
         />
       </div>
+
+      {/* Bill estimate */}
+      {estimatedBill !== null && estimatedBill !== undefined && (
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[#64748B] uppercase tracking-wider font-medium">
+              Estimated Daily Bill
+            </span>
+            <span className="text-lg font-bold text-[#F8FAFC] tabular-nums">
+              €{estimatedBill.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Self metrics */}
       <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">

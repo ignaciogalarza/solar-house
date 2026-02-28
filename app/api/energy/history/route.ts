@@ -5,6 +5,7 @@
  * GET /api/energy/history?period=week
  * GET /api/energy/history?period=month
  * GET /api/energy/history?period=year
+ * GET /api/energy/history?period=custom&startDate=2026-02-01&endDate=2026-02-25
  *
  * Returns energy readings from MyEnergi API with database caching for historical data.
  */
@@ -407,33 +408,44 @@ async function handleDayRequest(
 }
 
 /**
- * Handle multi-day request (week, month, year)
+ * Handle multi-day request (week, month, year, custom)
  */
 async function handleMultiDayRequest(
   client: ReturnType<typeof createMyEnergiClient>,
   zappiSerial: string | undefined,
   eddiSerial: string | undefined,
-  period: string
+  period: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<MultiDayHistoryResponse> {
-  // Determine number of days based on period
-  const daysMap: Record<string, number> = {
-    week: 7,
-    month: 30,
-    year: 365,
-  };
+  let daysStart: string;
+  let daysEnd: string;
 
-  const days = daysMap[period];
-  if (!days) {
-    throw new Error("Invalid period: " + period);
+  if (period === "custom" && startDate && endDate) {
+    daysStart = startDate;
+    daysEnd = endDate;
+  } else {
+    // Determine number of days based on period
+    const daysMap: Record<string, number> = {
+      week: 7,
+      month: 30,
+      year: 365,
+    };
+
+    const days = daysMap[period];
+    if (!days) {
+      throw new Error("Invalid period: " + period);
+    }
+
+    // Get date range (ending yesterday)
+    daysEnd = getYesterday();
+    daysStart = getDateRange(daysEnd, days);
   }
 
-  // Get date range (ending yesterday)
-  const endDate = getYesterday();
-  const startDate = getDateRange(endDate, days);
-  const allDates = getDatesInRange(startDate, endDate);
+  const allDates = getDatesInRange(daysStart, daysEnd);
 
   // Try to get all dates from cache
-  const cachedData = await getMultipleDaysFromCache(startDate, endDate);
+  const cachedData = await getMultipleDaysFromCache(daysStart, daysEnd);
 
   // Convert to map for easy lookup
   const cacheMap = new Map<string, DailyReading>();
@@ -496,8 +508,8 @@ async function handleMultiDayRequest(
     success: true,
     data: {
       period,
-      startDate,
-      endDate,
+      startDate: daysStart,
+      endDate: daysEnd,
       readings,
       totals,
     },
@@ -514,14 +526,27 @@ export async function GET(request: NextRequest): Promise<NextResponse<HistoryRes
     const searchParams = request.nextUrl.searchParams;
     const period = searchParams.get("period") || "day";
     const dateStr = searchParams.get("date");
+    const startDateStr = searchParams.get("startDate");
+    const endDateStr = searchParams.get("endDate");
 
     // Validate period parameter
-    const validPeriods = ["day", "week", "month", "year"];
+    const validPeriods = ["day", "week", "month", "year", "custom"];
     if (!validPeriods.includes(period)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid period. Supported: day, week, month, year",
+          error: "Invalid period. Supported: day, week, month, year, custom",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate custom period has both dates
+    if (period === "custom" && (!startDateStr || !endDateStr)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Custom period requires both startDate and endDate parameters",
         },
         { status: 400 }
       );
@@ -571,12 +596,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<HistoryRes
       );
       return NextResponse.json(response);
     } else {
-      // Handle week, month, year
+      // Handle week, month, year, custom
       const response = await handleMultiDayRequest(
         client,
         zappiSerial,
         eddiSerial,
-        period
+        period,
+        startDateStr || undefined,
+        endDateStr || undefined
       );
       return NextResponse.json(response);
     }

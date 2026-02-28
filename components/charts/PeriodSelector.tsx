@@ -1,8 +1,8 @@
 import React from 'react';
 
 export interface PeriodSelectorProps {
-  selected: 'day' | 'week' | 'month' | 'year';
-  onChange: (period: 'day' | 'week' | 'month' | 'year') => void;
+  selected: 'day' | 'week' | 'month' | 'year' | 'custom';
+  onChange: (period: 'day' | 'week' | 'month' | 'year' | 'custom') => void;
 }
 
 const periods = [
@@ -10,6 +10,7 @@ const periods = [
   { value: 'week' as const, label: 'Week' },
   { value: 'month' as const, label: 'Month' },
   { value: 'year' as const, label: 'Year' },
+  { value: 'custom' as const, label: 'Custom' },
 ] as const;
 
 export function PeriodSelector({ selected, onChange }: PeriodSelectorProps) {
