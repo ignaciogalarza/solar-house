@@ -19,6 +19,7 @@ interface ProviderCardProps {
   switchingBonus: number;
   onCostSaved: () => void;
   onSwitch?: () => void;
+  onEdit?: () => void;
 }
 
 export function ProviderCard({
@@ -38,6 +39,7 @@ export function ProviderCard({
   switchingBonus,
   onCostSaved,
   onSwitch,
+  onEdit,
 }: ProviderCardProps) {
   const [localExitFee, setLocalExitFee] = useState(String(exitFee || ""));
   const [localBonus, setLocalBonus] = useState(String(switchingBonus || ""));
@@ -106,8 +108,23 @@ export function ProviderCard({
             </div>
           )}
           {isProspect && (
-            <div className="px-2 py-0.5 bg-[#F59E0B]/20 text-[#F59E0B] text-xs rounded-full">
-              Prospect
+            <div className="flex items-center gap-2">
+              <div className="px-2 py-0.5 bg-[#F59E0B]/20 text-[#F59E0B] text-xs rounded-full">
+                Prospect
+              </div>
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="text-[#94A3B8] hover:text-white transition-colors"
+                  aria-label="Edit prospect"
+                  title="Edit"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
         </div>

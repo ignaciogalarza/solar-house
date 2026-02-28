@@ -4,14 +4,31 @@ import { useState } from "react";
 
 interface Period {
   name: string;
-  rate: string;
+  rate: string;   // stored as cents string in the UI (e.g. "19.5")
   startTime: string;
   endTime: string;
+}
+
+interface InitialValues {
+  providerName: string;
+  tariffName: string;
+  exportRate: number | null;      // euros in DB
+  standingCharge: number | null;  // euros in DB
+  switchingBonus: number | null;  // euros flat amount
+  periods: Array<{
+    name: string;
+    rate: number;   // euros in DB
+    startTime: string;
+    endTime: string;
+  }>;
 }
 
 interface ProspectFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  // Edit mode — when provided the form PATCHes instead of POSTing
+  editProspectId?: number;
+  initialValues?: InitialValues;
 }
 
 const DEFAULT_PERIODS: Period[] = [
@@ -19,13 +36,46 @@ const DEFAULT_PERIODS: Period[] = [
   { name: "Night", rate: "", startTime: "23:00", endTime: "08:00" },
 ];
 
-export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
-  const [providerName, setProviderName] = useState("");
-  const [tariffName, setTariffName] = useState("");
-  const [exportRate, setExportRate] = useState("");
-  const [standingCharge, setStandingCharge] = useState("");
-  const [switchingBonus, setSwitchingBonus] = useState("");
-  const [periods, setPeriods] = useState<Period[]>(DEFAULT_PERIODS);
+/** Convert a cents string entered by the user to a euro number for the API */
+function centsToEuros(centsStr: string): number {
+  return parseFloat(centsStr) / 100;
+}
+
+/** Convert a euro value from the DB to a cents string for display */
+function eurosToCentsStr(euros: number | null | undefined): string {
+  if (euros == null) return "";
+  return (euros * 100).toFixed(2).replace(/\.?0+$/, "");
+}
+
+export function ProspectForm({
+  onSuccess,
+  onCancel,
+  editProspectId,
+  initialValues,
+}: ProspectFormProps) {
+  const isEditMode = editProspectId !== undefined;
+
+  const [providerName, setProviderName] = useState(initialValues?.providerName ?? "");
+  const [tariffName, setTariffName] = useState(initialValues?.tariffName ?? "");
+  const [exportRate, setExportRate] = useState(
+    eurosToCentsStr(initialValues?.exportRate)
+  );
+  const [standingCharge, setStandingCharge] = useState(
+    eurosToCentsStr(initialValues?.standingCharge)
+  );
+  const [switchingBonus, setSwitchingBonus] = useState(
+    initialValues?.switchingBonus != null ? String(initialValues.switchingBonus) : ""
+  );
+  const [periods, setPeriods] = useState<Period[]>(
+    initialValues?.periods?.length
+      ? initialValues.periods.map((p) => ({
+          name: p.name,
+          rate: eurosToCentsStr(p.rate),
+          startTime: p.startTime,
+          endTime: p.endTime,
+        }))
+      : DEFAULT_PERIODS
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,39 +108,43 @@ export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
       return;
     }
 
+    const payload = {
+      providerName,
+      tariffName,
+      exportRate: exportRate ? centsToEuros(exportRate) : undefined,
+      standingCharge: standingCharge ? centsToEuros(standingCharge) : undefined,
+      switchingBonus: switchingBonus ? parseFloat(switchingBonus) : undefined,
+      periods: validPeriods.map((p) => ({
+        name: p.name,
+        rate: centsToEuros(p.rate),
+        startTime: p.startTime,
+        endTime: p.endTime,
+      })),
+    };
+
     setSaving(true);
     try {
-      const res = await fetch("/api/prospects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          providerName,
-          tariffName,
-          exportRate: exportRate ? parseFloat(exportRate) : undefined,
-          standingCharge: standingCharge
-            ? parseFloat(standingCharge)
-            : undefined,
-          switchingBonus: switchingBonus
-            ? parseFloat(switchingBonus)
-            : undefined,
-          periods: validPeriods.map((p) => ({
-            name: p.name,
-            rate: parseFloat(p.rate),
-            startTime: p.startTime,
-            endTime: p.endTime,
-          })),
-        }),
-      });
+      const res = isEditMode
+        ? await fetch(`/api/prospects/${editProspectId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+        : await fetch("/api/prospects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
       if (!res.ok) {
         const json = await res.json();
-        setError(json.error || "Failed to add provider");
+        setError(json.error || (isEditMode ? "Failed to update provider" : "Failed to add provider"));
         return;
       }
 
       onSuccess();
     } catch {
-      setError("Failed to add provider");
+      setError(isEditMode ? "Failed to update provider" : "Failed to add provider");
     } finally {
       setSaving(false);
     }
@@ -99,7 +153,9 @@ export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
   return (
     <div className="bg-[#1E293B] rounded-xl p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-medium text-white">Add Provider to Compare</div>
+        <div className="text-sm font-medium text-white">
+          {isEditMode ? "Edit Provider" : "Add Provider to Compare"}
+        </div>
         <button
           onClick={onCancel}
           className="text-[#94A3B8] hover:text-white transition-colors"
@@ -141,7 +197,7 @@ export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
         {/* Rates section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-[#94A3B8]">Rate periods (€/kWh)</label>
+            <label className="text-xs text-[#94A3B8]">Rate periods (c/kWh)</label>
             <button
               type="button"
               onClick={addPeriod}
@@ -161,11 +217,12 @@ export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
                   className="bg-[#0F172A] text-xs text-white rounded px-2 py-1.5 outline-none placeholder:text-slate-600 min-w-0"
                 />
                 <div className="flex items-center bg-[#0F172A] rounded px-2 py-1.5 gap-1">
-                  <span className="text-[#94A3B8] text-xs">€</span>
+                  <span className="text-[#94A3B8] text-xs">c</span>
                   <input
                     type="number"
-                    step="0.001"
-                    placeholder="0.000"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
                     value={p.rate}
                     onChange={(e) => updatePeriod(i, "rate", e.target.value)}
                     className="bg-transparent text-xs text-white w-full outline-none placeholder:text-slate-600 min-w-0"
@@ -203,12 +260,12 @@ export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
         {/* Standing charge + Export rate + Switching bonus */}
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="text-xs text-[#94A3B8] block mb-1">Standing (€/day)</label>
+            <label className="text-xs text-[#94A3B8] block mb-1">Standing (c/day)</label>
             <div className="flex items-center bg-[#0F172A] rounded-lg px-2 py-2 gap-1">
-              <span className="text-[#94A3B8] text-xs">€</span>
+              <span className="text-[#94A3B8] text-xs">c</span>
               <input
                 type="number"
-                step="0.001"
+                step="0.01"
                 min="0"
                 placeholder="0.00"
                 value={standingCharge}
@@ -218,14 +275,14 @@ export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
             </div>
           </div>
           <div>
-            <label className="text-xs text-[#94A3B8] block mb-1">Export (€/kWh)</label>
+            <label className="text-xs text-[#94A3B8] block mb-1">Export (c/kWh)</label>
             <div className="flex items-center bg-[#0F172A] rounded-lg px-2 py-2 gap-1">
-              <span className="text-[#94A3B8] text-xs">€</span>
+              <span className="text-[#94A3B8] text-xs">c</span>
               <input
                 type="number"
-                step="0.001"
+                step="0.01"
                 min="0"
-                placeholder="0.000"
+                placeholder="0.00"
                 value={exportRate}
                 onChange={(e) => setExportRate(e.target.value)}
                 className="bg-transparent text-xs text-white w-full outline-none placeholder:text-slate-600"
@@ -266,7 +323,9 @@ export function ProspectForm({ onSuccess, onCancel }: ProspectFormProps) {
             disabled={saving}
             className="flex-1 py-2 rounded-lg bg-[#F59E0B] text-[#0F172A] text-sm font-medium disabled:opacity-50 hover:bg-[#FCD34D] transition-colors"
           >
-            {saving ? "Adding..." : "Add Provider"}
+            {saving
+              ? isEditMode ? "Saving..." : "Adding..."
+              : isEditMode ? "Save Changes" : "Add Provider"}
           </button>
         </div>
       </form>

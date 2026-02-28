@@ -57,6 +57,15 @@ export default function ComparePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showProspectForm, setShowProspectForm] = useState(false);
+  const [editingProspect, setEditingProspect] = useState<{
+    id: number;
+    providerName: string;
+    tariffName: string;
+    exportRate: number | null;
+    standingCharge: number | null;
+    switchingBonus: number | null;
+    periods: Array<{ name: string; rate: number; startTime: string; endTime: string }>;
+  } | null>(null);
 
   const fetchData = useCallback(async (p: Period) => {
     setLoading(true);
@@ -104,6 +113,24 @@ export default function ComparePage() {
       .map((p) => ({ name: p.name!, rate: p.rate! })),
     isBest: c.isBest,
   }));
+
+  async function handleEditProspect(tariffId: number) {
+    const res = await fetch("/api/prospects");
+    if (!res.ok) return;
+    const prospects: Array<{
+      id: number;
+      providerName: string;
+      tariffName: string;
+      exportRate: number | null;
+      standingCharge: number | null;
+      switchingBonus: number | null;
+      periods: Array<{ name: string; rate: number; startTime: string; endTime: string }>;
+    }> = await res.json();
+    const prospect = prospects.find((p) => p.id === tariffId);
+    if (!prospect) return;
+    setShowProspectForm(false);
+    setEditingProspect(prospect);
+  }
 
   async function handleSwitch(tariffId: number) {
     // Fetch full prospect data (with periods)
@@ -227,6 +254,7 @@ export default function ComparePage() {
                     switchingBonus={c.switchingBonus}
                     onCostSaved={() => fetchData(period)}
                     onSwitch={c.isProspect ? () => handleSwitch(c.tariffId) : undefined}
+                    onEdit={c.isProspect ? () => handleEditProspect(c.tariffId) : undefined}
                   />
                 );
               })}
@@ -238,8 +266,21 @@ export default function ComparePage() {
             <RateTable tariffs={rateTableTariffs} />
           )}
 
+          {/* Edit Prospect Form */}
+          {editingProspect && (
+            <ProspectForm
+              editProspectId={editingProspect.id}
+              initialValues={editingProspect}
+              onSuccess={() => {
+                setEditingProspect(null);
+                fetchData(period);
+              }}
+              onCancel={() => setEditingProspect(null)}
+            />
+          )}
+
           {/* Add Provider */}
-          {showProspectForm ? (
+          {!editingProspect && (showProspectForm ? (
             <ProspectForm
               onSuccess={() => {
                 setShowProspectForm(false);
@@ -263,7 +304,7 @@ export default function ComparePage() {
               </svg>
               Add Provider to Compare
             </button>
-          )}
+          ))}
         </>
       )}
     </main>

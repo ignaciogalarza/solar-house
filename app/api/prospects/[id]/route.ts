@@ -4,21 +4,38 @@ import { electricityTariffs, tariffPeriods } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 /**
+ * Type definition for a tariff period in the update request.
+ */
+interface PeriodInput {
+  name: string;
+  rate: number;
+  startTime: string;
+  endTime: string;
+  daysOfWeek?: number[];
+}
+
+/**
  * Type definition for prospect tariff update body.
- * Only switchingBonus can be updated.
+ * Supports full prospect updates including tariff details and periods.
  */
 interface ProspectUpdateBody {
   switchingBonus?: number;
+  providerName?: string;
+  tariffName?: string;
+  exportRate?: number | null;
+  standingCharge?: number | null;
+  periods?: PeriodInput[];
 }
 
 /**
  * PATCH /api/prospects/[id]
  *
- * Updates a prospect tariff's switching bonus.
+ * Updates a prospect tariff with full support for tariff details and periods.
  *
  * Business logic:
- * - Only switchingBonus field can be updated
- * - Returns the updated prospect tariff
+ * - Supports updating: switchingBonus, providerName, tariffName, exportRate, standingCharge
+ * - When periods is provided, deletes all existing tariffPeriods and inserts new ones
+ * - Returns the updated prospect tariff with all periods
  *
  * @param request - Next.js request containing update data
  * @param params - Route parameters containing tariff id
@@ -66,25 +83,61 @@ export async function PATCH(
       );
     }
 
-    // Update the switchingBonus field
+    // Build the tariff update data
     const updateData: Partial<typeof electricityTariffs.$inferInsert> = {};
     if (body.switchingBonus !== undefined) {
       updateData.switchingBonus = body.switchingBonus;
     }
+    if (body.providerName !== undefined) {
+      updateData.providerName = body.providerName;
+    }
+    if (body.tariffName !== undefined) {
+      updateData.tariffName = body.tariffName;
+    }
+    if (body.exportRate !== undefined) {
+      updateData.exportRate = body.exportRate;
+    }
+    if (body.standingCharge !== undefined) {
+      updateData.standingCharge = body.standingCharge;
+    }
 
-    // Only proceed with update if there are fields to update
-    if (Object.keys(updateData).length === 0) {
+    // Update the tariff record if there are fields to update
+    if (Object.keys(updateData).length > 0) {
+      await db
+        .update(electricityTariffs)
+        .set(updateData)
+        .where(eq(electricityTariffs.id, tariffId));
+    }
+
+    // Handle periods update if provided
+    if (body.periods !== undefined) {
+      // Delete all existing periods for this tariff
+      await db
+        .delete(tariffPeriods)
+        .where(eq(tariffPeriods.tariffId, tariffId));
+
+      // Insert new periods if any provided
+      if (body.periods.length > 0) {
+        const periodInserts = body.periods.map(period => ({
+          tariffId,
+          name: period.name,
+          rate: period.rate,
+          startTime: period.startTime,
+          endTime: period.endTime,
+          daysOfWeek: period.daysOfWeek ? JSON.stringify(period.daysOfWeek) : null
+        }));
+
+        await db.insert(tariffPeriods).values(periodInserts);
+      }
+    }
+
+    // Validate that at least one field was updated
+    if (Object.keys(updateData).length === 0 && body.periods === undefined) {
       return NextResponse.json(
         { error: 'No valid fields to update' },
         { status: 400 }
       );
     }
-
-    // Update the tariff record
-    await db
-      .update(electricityTariffs)
-      .set(updateData)
-      .where(eq(electricityTariffs.id, tariffId));
 
     // Fetch the updated tariff with its periods
     const updatedTariff = await db

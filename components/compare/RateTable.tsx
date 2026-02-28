@@ -15,12 +15,14 @@ interface RateTableProps {
 }
 
 export function RateTable({ tariffs }: RateTableProps) {
+  const fmtRate = (euros: number) => `${(euros * 100).toFixed(2)}c`;
+
   const getDayRate = (periods: RatePeriod[]): string => {
     const dayPeriod = periods.find(
       (p) => p.name.toLowerCase() === "day"
     );
-    if (dayPeriod) return `€${dayPeriod.rate.toFixed(3)}`;
-    if (periods.length > 0) return `€${periods[0].rate.toFixed(3)}`;
+    if (dayPeriod) return fmtRate(dayPeriod.rate);
+    if (periods.length > 0) return fmtRate(periods[0].rate);
     return "—";
   };
 
@@ -28,7 +30,7 @@ export function RateTable({ tariffs }: RateTableProps) {
     const nightPeriod = periods.find(
       (p) => p.name.toLowerCase() === "night"
     );
-    return nightPeriod ? `€${nightPeriod.rate.toFixed(3)}` : "—";
+    return nightPeriod ? fmtRate(nightPeriod.rate) : "—";
   };
 
   return (
@@ -44,13 +46,13 @@ export function RateTable({ tariffs }: RateTableProps) {
                 Provider
               </th>
               <th className="text-[#94A3B8] text-xs font-medium text-right py-2 px-3">
-                Day
+                Day (c)
               </th>
               <th className="text-[#94A3B8] text-xs font-medium text-right py-2 px-3">
-                Night
+                Night (c)
               </th>
               <th className="text-[#94A3B8] text-xs font-medium text-right py-2">
-                Export
+                Export (c)
               </th>
             </tr>
           </thead>
@@ -74,7 +76,7 @@ export function RateTable({ tariffs }: RateTableProps) {
                 </td>
                 <td className="text-right py-2 text-[#10B981]">
                   {tariff.exportRate !== null
-                    ? `€${tariff.exportRate.toFixed(3)}`
+                    ? fmtRate(tariff.exportRate)
                     : "—"}
                 </td>
               </tr>
